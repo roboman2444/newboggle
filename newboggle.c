@@ -3,7 +3,15 @@
 #include <stdint.h>
 #include <string.h>
 
+#define BENCHITTER 100000
 
+#ifdef BENCHMARK
+#include <time.h>
+#endif
+#define BOARDX 4
+#define BOARDY 4
+
+#define MAXWORD 16 //should be boardx * boardy or some shit
 
 
 #define TRUE 1
@@ -19,11 +27,11 @@ typedef struct wordtrie_s {
 	uint8_t isend;
 } wordtrie_t;
 
-char board[4][4] = {	"enen",
-			"vfao",
-			"txer",
-			"cayu"};
-char boardsign[4][4] = {0};
+char board[BOARDX][BOARDY] = {	"enen",
+				"vfao",
+				"txer",
+				"cayu"};
+char boardsign[BOARDX][BOARDY] = {0};
 
 
 
@@ -59,7 +67,7 @@ int addtotrie(const char * word, const size_t wordlen, wordtrie_t * const r){
 
 
 int jdepth = 0;
-char jeremy[16] = {0};
+char jeremy[MAXWORD] = {0};
 
 int search(int x, int y, wordtrie_t *cur){
 	if(boardsign[x][y]) return 0;
@@ -74,18 +82,22 @@ int search(int x, int y, wordtrie_t *cur){
 		jeremy[jdepth] = dil+'u';
 		jdepth++;
 	}
-	if(next->isend) printf("%s\n", jeremy);
+	if(next->isend){
+		#ifndef BENCHMARK
+		 printf("%s\n", jeremy);
+		#endif
+	}
 	if(y > 0){
 		if(x > 0) search(x-1, y-1, next);
 		search(x, y-1, next);
-		if(x < 3) search(x+1, y-1, next);
+		if(x < BOARDX-1) search(x+1, y-1, next);
 	}
 	if(x > 0) search(x-1, y, next);
-	if(x < 3) search(x+1, y, next);
-	if(y < 3){
+	if(x < BOARDX-1) search(x+1, y, next);
+	if(y < BOARDY-1){
 		if(x > 0) search(x-1, y+1, next);
 		search(x, y+1, next);
-		if(x < 3) search(x+1, y+1, next);
+		if(x < BOARDX-1) search(x+1, y+1, next);
 	}
 	boardsign[x][y] = 0;
 	jeremy[jdepth] = 0;
@@ -107,9 +119,9 @@ int main(const int argc, const char ** argv){
 	}
 
 	int x, y;
-	for(y = 0; y < 4; y++)
-	for(x = 0; x < 4; x++)
-		board[y][x] -= 'a';
+	for(x = 0; x < BOARDX; x++)
+	for(y = 0; y < BOARDY; y++)
+		board[x][y] -= 'a';
 
 
 	char *line = 0;
@@ -119,12 +131,25 @@ int main(const int argc, const char ** argv){
 //		printf("%s", line);
 		addtotrie(line, read-1, &root);
 	}
-
-	for(y = 0; y < 4; y++)
-	for(x = 0; x < 4; x++)
-		search(x, y, &root);
-
 	if(line) free(line);
+
+#ifdef BENCHMARK
+	struct timespec tstart = {0}, tend = {0};
+	clock_gettime(CLOCK_MONOTONIC, &tstart);
+	int k;
+	for(k = 0; k < BENCHITTER; k++){
+#endif
+
+	for(x = 0; x < BOARDX; x++)
+	for(y = 0; y < BOARDY; y++)
+		search(x, y, &root);
+#ifdef BENCHMARK
+	}
+	clock_gettime(CLOCK_MONOTONIC, &tend);
+	double time = ((double)tend.tv_sec + 1.0e-9 * tend.tv_nsec) - ((double)tstart.tv_sec + 1.0e-9 * tstart.tv_nsec);
+	printf("time to do search %.8f\n", time);
+#endif
+
 
 	return 0;
 }
